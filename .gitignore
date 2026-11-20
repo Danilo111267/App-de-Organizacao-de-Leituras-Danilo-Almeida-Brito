@@ -1,0 +1,16 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+.packages
+.idea/
+.vscode/
+*.iml
+android/.gradle/
+android/local.properties
+android/key.properties
+android/captures/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh

@@ -1,0 +1,9 @@
+{
+  "name": "Organização de Leituras",
+  "short_name": "Leituras",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1565C0",
+  "description": "Aplicativo de organização de livros"
+}
