@@ -1,6 +1,8 @@
 // Integrante: Danilo Almeida Brito
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const AppLeituras());
@@ -26,7 +28,47 @@ class TelaLivros extends StatefulWidget {
 }
 
 class _TelaLivrosState extends State<TelaLivros> {
-  final List<Map<String, String>> livros = [];
+  final preferencias = SharedPreferencesAsync();
+  List<Map<String, String>> livros = [];
+  bool carregando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    carregar();
+  }
+
+  Future<void> carregar() async {
+    try {
+      final texto = await preferencias.getString('livros');
+      final lista = texto == null ? [] : jsonDecode(texto) as List;
+
+      if (!mounted) return;
+
+      setState(() {
+        livros = lista
+            .map((item) => Map<String, String>.from(item as Map))
+            .toList();
+        carregando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        carregando = false;
+      });
+      aviso('Erro ao carregar livros.');
+    }
+  }
+
+  Future<void> salvar() async {
+    await preferencias.setString('livros', jsonEncode(livros));
+  }
+
+  void aviso(String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensagem)),
+    );
+  }
 
   Future<void> adicionar() async {
     final novo = await Navigator.push<Map<String, String>>(
@@ -40,44 +82,62 @@ class _TelaLivrosState extends State<TelaLivros> {
       livros.add(novo);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Livro adicionado!')),
-    );
+    try {
+      await salvar();
+      if (mounted) aviso('Livro adicionado!');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        livros.remove(novo);
+      });
+      aviso('Erro ao salvar livro.');
+    }
   }
 
-  void remover(int index) {
+  Future<void> remover(int index) async {
+    final livro = livros[index];
+
     setState(() {
       livros.removeAt(index);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Livro removido!')),
-    );
+    try {
+      await salvar();
+      if (mounted) aviso('Livro removido!');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        livros.insert(index, livro);
+      });
+      aviso('Erro ao remover livro.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Danilo Almeida Brito')),
-      body: livros.isEmpty
-          ? const Center(child: Text('Nenhum livro cadastrado.'))
-          : ListView.builder(
-              itemCount: livros.length,
-              itemBuilder: (context, index) {
-                final livro = livros[index];
+      body: carregando
+          ? const Center(child: CircularProgressIndicator())
+          : livros.isEmpty
+              ? const Center(child: Text('Nenhum livro cadastrado.'))
+              : ListView.builder(
+                  itemCount: livros.length,
+                  itemBuilder: (context, index) {
+                    final livro = livros[index];
 
-                return ListTile(
-                  title: Text(livro['titulo']!),
-                  subtitle: Text(livro['autor']! + ' - ' + livro['status']!),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () => remover(index),
-                  ),
-                );
-              },
-            ),
+                    return ListTile(
+                      title: Text(livro['titulo']!),
+                      subtitle: Text(livro['autor']! + ' - ' + livro['status']!),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => remover(index),
+                      ),
+                    );
+                  },
+                ),
       floatingActionButton: FloatingActionButton(
-        onPressed: adicionar,
+        onPressed: carregando ? null : adicionar,
         child: const Icon(Icons.add),
       ),
     );
